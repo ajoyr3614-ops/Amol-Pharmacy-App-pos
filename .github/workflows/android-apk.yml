@@ -27,10 +27,35 @@ jobs:
           mkdir project
           unzip amol-pharmacy-management.zip -d project
 
-      - name: Fix Kotlin syntax errors
+      - name: Fix Kotlin source errors
         run: |
-          sed -i 's/() => Unit/() -> Unit/g' project/android/app/src/main/java/com/amol/pharmacy/ui/screens/PosSalesScreen.kt
-          sed -i 's/() => Unit/() -> Unit/g' project/android/app/src/main/java/com/amol/pharmacy/ui/screens/SummaryScreen.kt
+          python3 - <<'PY'
+          from pathlib import Path
+
+          base = Path("project/android/app/src/main/java/com/amol/pharmacy/ui/screens")
+
+          for name in ["PosSalesScreen.kt", "SummaryScreen.kt"]:
+              path = base / name
+              source = path.read_text()
+              source = source.replace("() => Unit", "() -> Unit")
+              path.write_text(source)
+
+          path = base / "PosSalesScreen.kt"
+          source = path.read_text()
+          source = source.replace("product.salePrice", "product.salePricePerPiece")
+
+          extension = """
+          
+          private fun Double.format(digits: Int): String =
+              String.format(java.util.Locale.US, "%.${digits}f", this)
+          """
+
+          if "private fun Double.format(" not in source:
+              source += extension
+
+          path.write_text(source)
+          print("Kotlin fixes applied.")
+          PY
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
